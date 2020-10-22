@@ -10,10 +10,10 @@ RUN apt-get update && \
 	apt-get install -y pkg-config libssl-dev
 
 WORKDIR /tmp
-RUN wget https://github.com/opendnssec/SoftHSMv2/archive/2.5.0.tar.gz
-RUN tar xf 2.5.0.tar.gz
-RUN cd SoftHSMv2-2.5.0 \
-		&& sh autogen.sh \
+RUN git clone https://github.com/opendnssec/SoftHSMv2.git \
+	&& cd SoftHSMv2 \
+	git reset --hard 20a53bd083a6134ce2230f80edda5dc8be0366bd
+RUN cd sh autogen.sh \
 		&& ./configure --disable-gost \
 		&& make \
 		&& make install

@@ -34,13 +34,13 @@ RUN cd tpm2-tools \
 	&& make install
 
 WORKDIR /tmp
-RUN wget https://github.com/opendnssec/SoftHSMv2/archive/2.5.0.tar.gz
-RUN tar xf 2.5.0.tar.gz
-RUN cd SoftHSMv2-2.5.0 \
-	&& sh autogen.sh \
-	&& ./configure --disable-gost \
-	&& make \
-	&& make install
+RUN git clone https://github.com/opendnssec/SoftHSMv2.git \
+	&& cd SoftHSMv2 \
+	git reset --hard 20a53bd083a6134ce2230f80edda5dc8be0366bd
+RUN cd sh autogen.sh \
+		&& ./configure --disable-gost \
+		&& make \
+		&& make install
 
 # Create a new token in a new slot. The slot number assigned will be random
 # and is found with the find_slot_number script.
