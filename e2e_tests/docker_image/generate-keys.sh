@@ -31,16 +31,21 @@ cd ../
 # We use the Parsec Tool to create one RSA and one ECC key per provider,
 # when it is possible.
 cargo install parsec-tool
+# Mbed Crypto
 parsec-tool -p 1 create-rsa-key -k rsa
 parsec-tool -p 1 create-ecc-key -k ecc
+
+# PKCS11
 parsec-tool -p 2 create-rsa-key -k rsa
 # PKCS11 provider does not support creating ECC keys
 # See https://github.com/parallaxsecond/parsec/issues/421
 #parsec-tool -p 2 create-ecc-key -k ecc
+
+# TPM
 parsec-tool -p 3 create-rsa-key -k rsa
 parsec-tool -p 3 create-ecc-key -k ecc
-#TODO: add keys in the Trusted Service and CryptoAuthLib providers
-#TODO: when possible.
+
+#TODO: add keys in the CryptoAuthLib provider when possible.
 
 pkill parsec
 tpm2_shutdown -T mssim
@@ -51,8 +56,8 @@ pkill tpm_server
 cargo uninstall parsec-tool
 cp -r /tmp/create_keys/parsec/mappings /tmp
 # Mbed Crypto creates keys in the current directory.
-cp -r /tmp/create_keys/parsec/0000000000000002.psa_its /tmp
-cp -r /tmp/create_keys/parsec/0000000000000003.psa_its /tmp
+cp /tmp/create_keys/parsec/0000000000000002.psa_its /tmp/mbed-keys/
+cp /tmp/create_keys/parsec/0000000000000003.psa_its /tmp/mbed-keys/
 # The TPM server state needs to be passed to the tested service
 cp -r /tmp/create_keys/parsec/NVChip /tmp
 rm -rf /tmp/create_keys

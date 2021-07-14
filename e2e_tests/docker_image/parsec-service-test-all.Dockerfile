@@ -74,8 +74,11 @@ RUN git clone https://github.com/ARMmbed/mbedtls.git \
 	&& git reset --hard mbedtls-2.25.0
 RUN cd mbedtls \
 	&& ./scripts/config.py crypto \
-	&& SHARED=1 make \
-	&& make install
+	# Set the key location statically to `/tmp/mbed-keys/` to avoid conflicts with the TS provider
+	&& ./scripts/config.py --force set PSA_ITS_STORAGE_PREFIX \"/tmp/mbed-keys/\" \
+	&& cmake . \
+	&& SHARED=1 make mbedcrypto \
+	&& mkdir -p /tmp/mbed-keys
 
 # Install dependencies for Trusted Services
 # Install cmake v 3.18

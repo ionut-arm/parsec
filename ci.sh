@@ -175,11 +175,11 @@ if [ "$PROVIDER_NAME" = "pkcs11" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVID
     popd
 fi
 
-if [ "$PROVIDER_NAME" = "trusted-service" ] || [ "$PROVIDER_NAME" = "coverage" ]; then
+if [ "$PROVIDER_NAME" = "trusted-service" ] || [ "$PROVIDER_NAME" = "all" ] || [ "$PROVIDER_NAME" = "coverage" ] || [ "$PROVIDER_NAME" = "cargo-check" ]; then
     git submodule update --init
 fi
 
-if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
+if [ "$PROVIDER_NAME" = "mbed-crypto" ] || [ "$PROVIDER_NAME" = "all" ]; then
     # With those variables defined, dynamic linking will be attempted to build the
     # Mbed Crypto provider. The Mbed Crypto library was installed in the container.
     # Defining those variables during the trusted-service provider testing leads to a
@@ -206,9 +206,6 @@ if [ "$PROVIDER_NAME" = "coverage" ]; then
 
         cp -r /tmp/mappings/ .
         cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
-        if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-            cp /tmp/*.psa_its .
-        fi
 
         # Start service
         RUST_LOG=info cargo +1.51.0 tarpaulin --out Xml --forward --command build --exclude-files="$EXCLUDES" \
@@ -276,8 +273,8 @@ if [ "$PROVIDER_NAME" = "cargo-check" ]; then
     RUST_BACKTRACE=1 cargo check --features="pkcs11-provider"
     RUST_BACKTRACE=1 cargo check --features="tpm-provider"
     RUST_BACKTRACE=1 cargo check --features="cryptoauthlib-provider"
-    # To be added when trusted-service is added to all-providers feature
-    #RUST_BACKTRACE=1 cargo check --features="trusted-service-provider"
+
+    RUST_BACKTRACE=1 cargo check --features="trusted-service-provider"
     RUST_BACKTRACE=1 cargo check --features="all-providers"
     RUST_BACKTRACE=1 cargo check --features="direct-authenticator"
     RUST_BACKTRACE=1 cargo check --features="unix-peer-credentials-authenticator"
@@ -313,11 +310,6 @@ cp -r /tmp/mappings/ .
 # those keys have successfully been deleted.
 # TODO: add fake mappings for the Trusted Service and CryptoAuthLib providers.
 cp -r $(pwd)/e2e_tests/fake_mappings/* mappings
-# As Mbed Crypto saves its keys on the current directory we need to move them
-# as well.
-if [ "$PROVIDER_NAME" = "mbed-crypto" ]; then
-    cp /tmp/*.psa_its .
-fi
 
 echo "Start Parsec for end-to-end tests"
 RUST_LOG=info RUST_BACKTRACE=1 cargo run --release $FEATURES -- --config $CONFIG_PATH &

@@ -128,6 +128,15 @@ fn tpm_sign_cross() {
     import_and_verify(
         &mut client,
         ProviderId::Pkcs11,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    // Trusted Service
+    import_and_verify(
+        &mut client,
+        ProviderId::TrustedService,
         key_name,
         pub_key,
         signature,
@@ -152,6 +161,15 @@ fn tpm_sign_cross_ecc() {
     import_and_verify_ecc(
         &mut client,
         ProviderId::Pkcs11,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    // Trusted Service
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::TrustedService,
         key_name,
         pub_key,
         signature,
@@ -173,7 +191,22 @@ fn pkcs11_sign_cross() {
     );
 
     // TPM
-    import_and_verify(&mut client, ProviderId::Tpm, key_name, pub_key, signature);
+    import_and_verify(
+        &mut client,
+        ProviderId::Tpm,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    // Trusted Service
+    import_and_verify(
+        &mut client,
+        ProviderId::TrustedService,
+        key_name,
+        pub_key,
+        signature,
+    );
 }
 
 #[test]
@@ -189,6 +222,15 @@ fn pkcs11_sign_cross_ecc() {
         pub_key.clone(),
         signature.clone(),
     );
+
+    // Trusted Service
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::TrustedService,
+        key_name,
+        pub_key,
+        signature,
+    );
 }
 
 #[test]
@@ -196,7 +238,7 @@ fn mbed_crypto_sign_cross() {
     let key_name = String::from("mbed_crypto_sign_cross");
     let (mut client, pub_key, signature) = setup_sign(ProviderId::MbedCrypto, key_name.clone());
 
-    // Mbed Crypto
+    // Pkcs11
     import_and_verify(
         &mut client,
         ProviderId::Pkcs11,
@@ -206,7 +248,22 @@ fn mbed_crypto_sign_cross() {
     );
 
     // TPM
-    import_and_verify(&mut client, ProviderId::Tpm, key_name, pub_key, signature);
+    import_and_verify(
+        &mut client,
+        ProviderId::Tpm,
+        key_name.clone(),
+        pub_key.clone(),
+        signature.clone(),
+    );
+
+    // Trusted Service
+    import_and_verify(
+        &mut client,
+        ProviderId::TrustedService,
+        key_name,
+        pub_key,
+        signature,
+    );
 }
 
 #[test]
@@ -214,13 +271,22 @@ fn mbed_crypto_sign_cross_ecc() {
     let key_name = String::from("mbed_crypto_sign_cross_ecc");
     let (mut client, pub_key, signature) = setup_sign_ecc(ProviderId::MbedCrypto, key_name.clone());
 
-    // Mbed Crypto
+    // Pkcs11
     import_and_verify_ecc(
         &mut client,
         ProviderId::Pkcs11,
         key_name.clone(),
         pub_key.clone(),
         signature.clone(),
+    );
+
+    // Trusted Service
+    import_and_verify_ecc(
+        &mut client,
+        ProviderId::TrustedService,
+        key_name,
+        pub_key,
+        signature,
     );
 }
 

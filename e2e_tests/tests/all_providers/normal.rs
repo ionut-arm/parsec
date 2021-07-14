@@ -13,7 +13,7 @@ use std::collections::HashSet;
 fn list_providers() {
     let mut client = TestClient::new();
     let providers = client.list_providers().expect("list providers failed");
-    assert_eq!(providers.len(), 5);
+    assert_eq!(providers.len(), 6);
     let uuids: HashSet<Uuid> = providers.iter().map(|p| p.uuid).collect();
     // Core provider
     assert!(uuids.contains(&Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()));
@@ -25,6 +25,8 @@ fn list_providers() {
     assert!(uuids.contains(&Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap()));
     // CryptoAuthLib provider
     assert!(uuids.contains(&Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()));
+    // Crypto Trusted Service provider
+    assert!(uuids.contains(&Uuid::parse_str("71129441-508a-4da6-b6e8-7b98a777e4c0").unwrap()));
 }
 
 #[test]
@@ -41,14 +43,18 @@ fn list_providers_order_respected() {
     );
     assert_eq!(
         providers[2].uuid,
-        Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()
+        Uuid::parse_str("71129441-508a-4da6-b6e8-7b98a777e4c0").unwrap()
     );
     assert_eq!(
         providers[3].uuid,
-        Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()
+        Uuid::parse_str("30e39502-eba6-4d60-a4af-c518b7f5e38f").unwrap()
     );
     assert_eq!(
         providers[4].uuid,
+        Uuid::parse_str("b8ba81e2-e9f7-4bdd-b096-a29d0019960c").unwrap()
+    );
+    assert_eq!(
+        providers[5].uuid,
         Uuid::parse_str("47049873-2a43-4845-9d72-831eab668784").unwrap()
     );
 }
@@ -71,6 +77,7 @@ fn list_opcodes() {
     let mut crypto_providers_hsm = HashSet::new();
     let mut core_provider_opcodes = HashSet::new();
     let mut crypto_providers_cal = HashSet::new();
+    let mut crypto_ts_provider = HashSet::new();
 
     let _ = crypto_providers_hsm.insert(Opcode::PsaGenerateKey);
     let _ = crypto_providers_hsm.insert(Opcode::PsaDestroyKey);
@@ -91,6 +98,13 @@ fn list_opcodes() {
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaAeadDecrypt);
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaExportKey);
     let _ = crypto_providers_mbed_crypto.insert(Opcode::PsaGenerateRandom);
+
+    let _ = crypto_ts_provider.insert(Opcode::PsaGenerateKey);
+    let _ = crypto_ts_provider.insert(Opcode::PsaDestroyKey);
+    let _ = crypto_ts_provider.insert(Opcode::PsaSignHash);
+    let _ = crypto_ts_provider.insert(Opcode::PsaVerifyHash);
+    let _ = crypto_ts_provider.insert(Opcode::PsaImportKey);
+    let _ = crypto_ts_provider.insert(Opcode::PsaExportPublicKey);
 
     let _ = core_provider_opcodes.insert(Opcode::Ping);
     let _ = core_provider_opcodes.insert(Opcode::ListProviders);
@@ -130,6 +144,12 @@ fn list_opcodes() {
             .list_opcodes(ProviderId::CryptoAuthLib)
             .expect("list providers failed"),
         crypto_providers_cal
+    );
+    assert_eq!(
+        client
+            .list_opcodes(ProviderId::TrustedService)
+            .expect("list providers failed"),
+        crypto_ts_provider
     );
 }
 
