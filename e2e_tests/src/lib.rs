@@ -31,7 +31,7 @@
 pub mod raw_request;
 pub mod stress;
 
-use parsec_client::core::interface::operations::list_rots::RoTInfo;
+use parsec_client::core::interface::operations::list_attestation_metadata::AttestationMetadata;
 pub use raw_request::RawRequestClient;
 
 pub use parsec_client;
@@ -880,65 +880,29 @@ impl TestClient {
             .map_err(convert_error)
     }
 
-    pub fn prepare_activate_credential(
-        &self,
-        key_name: String,
-    ) -> Result<parsec_client::core::basic_client::PrepareActivateCredential> {
-        self.prepare_activate_credential_with_key(key_name, None)
-    }
-
-    pub fn prepare_activate_credential_with_key(
-        &self,
-        key_name: String,
-        attesting_key: Option<String>,
-    ) -> Result<parsec_client::core::basic_client::PrepareActivateCredential> {
-        self.basic_client
-            .prepare_activate_credential(key_name, attesting_key)
-            .map_err(convert_error)
-    }
-
-    pub fn activate_credential(
-        &self,
-        key_name: String,
-        credential: Vec<u8>,
-        secret: Vec<u8>,
-    ) -> Result<Vec<u8>> {
-        self.activate_credential_with_key(key_name, None, credential, secret)
-    }
-
-    pub fn activate_credential_with_key(
-        &self,
-        key_name: String,
-        attesting_key: Option<String>,
-        credential: Vec<u8>,
-        secret: Vec<u8>,
-    ) -> Result<Vec<u8>> {
-        self.basic_client
-            .activate_credential_attestation(key_name, attesting_key, credential, secret)
-            .map_err(convert_error)
-    }
-
-    pub fn certify_and_quote(
+    pub fn attest_key_default_attesting(
         &self,
         key_name: String,
         nonce: Vec<u8>,
-    ) -> Result<(Vec<u8>, Vec<u8>)> {
-        self.certify_and_quote_with_key(key_name, None, nonce)
+    ) -> Result<Vec<u8>> {
+        self.attest_key(key_name, None, nonce)
     }
 
-    pub fn certify_and_quote_with_key(
+    pub fn attest_key(
         &self,
         key_name: String,
         attesting_key: Option<String>,
         nonce: Vec<u8>,
-    ) -> Result<(Vec<u8>, Vec<u8>)> {
+    ) -> Result<Vec<u8>> {
         self.basic_client
-            .certify_and_quote_attestation(key_name, attesting_key, nonce)
+            .attest_key(key_name, attesting_key, nonce)
             .map_err(convert_error)
     }
 
-    pub fn list_rots(&self) -> Result<Vec<RoTInfo>> {
-        self.basic_client.list_rots().map_err(convert_error)
+    pub fn list_attestation_metadata(&self) -> Result<Vec<AttestationMetadata>> {
+        self.basic_client
+            .list_attestation_metadata()
+            .map_err(convert_error)
     }
 }
 
