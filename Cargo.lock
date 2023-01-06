@@ -1019,7 +1019,7 @@ dependencies = [
 [[package]]
 name = "parsec-interface"
 version = "0.27.0"
-source = "git+https://github.com/ionut-arm/parsec-interface-rs.git?branch=attested-tls#9c922087dd0960ffd88c25172714260b174b46c0"
+source = "git+https://github.com/ionut-arm/parsec-interface-rs.git?branch=attested-tls#af19b2a77d5419dcc711f592ee48ba0d616f590c"
 dependencies = [
  "bincode",
  "derivative",
@@ -1043,6 +1043,7 @@ dependencies = [
  "base64",
  "bincode",
  "bindgen 0.59.2",
+ "ciborium",
  "cryptoki",
  "derivative",
  "env_logger 0.8.4",
@@ -1063,6 +1064,7 @@ dependencies = [
  "rust-cryptoauthlib",
  "sd-notify",
  "serde",
+ "serde_bytes",
  "signal-hook",
  "spiffe",
  "structopt",

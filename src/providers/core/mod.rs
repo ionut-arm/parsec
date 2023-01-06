@@ -10,8 +10,8 @@ use crate::authenticators::ApplicationIdentity;
 use derivative::Derivative;
 use log::{error, trace};
 use parsec_interface::operations::{
-    delete_client, list_authenticators, list_clients, list_keys, list_opcodes, list_providers,
-    list_rots, ping, psa_destroy_key,
+    delete_client, list_attestation_metadata, list_authenticators, list_clients, list_keys,
+    list_opcodes, list_providers, ping, psa_destroy_key,
 };
 use parsec_interface::operations::{
     list_authenticators::AuthenticatorInfo, list_keys::KeyInfo, list_providers::ProviderInfo,
@@ -136,22 +136,32 @@ impl Provide for Provider {
         Ok(list_clients::Result { clients })
     }
 
-    fn list_rots(&self, _op: list_rots::Operation) -> Result<list_rots::Result> {
-        let mut rots = Vec::new();
+    fn list_attestation_metadata(
+        &self,
+        _op: list_attestation_metadata::Operation,
+    ) -> Result<list_attestation_metadata::Result> {
+        let mut attestation_metadata = Vec::new();
         for provider in &self.prov_list {
             let id = if let Ok((provider_info, _)) = provider.describe() {
                 provider_info.id.to_string()
             } else {
                 "unknown".to_string()
             };
-            let mut result = provider.list_rots(_op).unwrap_or_else(|e| {
-                error!("list_rots failed on provider {} with {}", id, e);
-                list_rots::Result { rots: Vec::new() }
+            let mut result = provider.list_attestation_metadata(_op).unwrap_or_else(|e| {
+                error!(
+                    "list_attestation_metadata failed on provider {} with {}",
+                    id, e
+                );
+                list_attestation_metadata::Result {
+                    attestation_metadata: Vec::new(),
+                }
             });
-            rots.append(&mut result.rots);
+            attestation_metadata.append(&mut result.attestation_metadata);
         }
 
-        Ok(list_rots::Result { rots })
+        Ok(list_attestation_metadata::Result {
+            attestation_metadata,
+        })
     }
 
     fn delete_client(

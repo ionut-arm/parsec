@@ -544,18 +544,3 @@ fn validate_ecc_public_key(public_key: &[u8], attributes: &Attributes) -> Result
 
     Ok(())
 }
-
-pub(super) fn ek_pub_key_to_bytes(ek_public: PublicKey) -> Result<Vec<u8>> {
-    pub_key_to_bytes(
-        ek_public,
-        Attributes {
-            lifetime: Lifetime::Persistent,
-            key_type: Type::RsaKeyPair,
-            bits: 2048,
-            policy: Policy {
-                usage_flags: Default::default(),
-                permitted_algorithms: Algorithm::None,
-            },
-        },
-    )
-}

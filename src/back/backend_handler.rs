@@ -308,14 +308,6 @@ impl BackEndHandler {
                 trace!("can_do_crypto egress");
                 self.result_to_response(NativeResult::CanDoCrypto(result), header)
             }
-            NativeOperation::PrepareKeyAttestation(op_prepare_key_attestation) => {
-                let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
-                let result = unwrap_or_else_return!(self
-                    .provider
-                    .prepare_key_attestation(app.identity(), op_prepare_key_attestation));
-                trace!("prepare_key_attestation egress");
-                self.result_to_response(NativeResult::PrepareKeyAttestation(result), header)
-            }
             NativeOperation::AttestKey(op_attest_key) => {
                 let app = unwrap_or_else_return!(app.ok_or(ResponseStatus::NotAuthenticated));
                 let result =
@@ -323,10 +315,11 @@ impl BackEndHandler {
                 trace!("attest_key egress");
                 self.result_to_response(NativeResult::AttestKey(result), header)
             }
-            NativeOperation::ListRoTs(op_list_rots) => {
-                let result = unwrap_or_else_return!(self.provider.list_rots(op_list_rots));
+            NativeOperation::ListAttestationMetadata(op_list_rots) => {
+                let result =
+                    unwrap_or_else_return!(self.provider.list_attestation_metadata(op_list_rots));
                 trace!("list_rots egress");
-                self.result_to_response(NativeResult::ListRoTs(result), header)
+                self.result_to_response(NativeResult::ListAttestationMetadata(result), header)
             }
         }
     }

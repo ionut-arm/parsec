@@ -35,8 +35,8 @@ pub mod trusted_service;
 
 use crate::authenticators::ApplicationIdentity;
 use parsec_interface::operations::{
-    attest_key, can_do_crypto, delete_client, list_authenticators, list_clients, list_keys,
-    list_opcodes, list_providers, list_rots, ping, prepare_key_attestation, psa_aead_decrypt,
+    attest_key, can_do_crypto, delete_client, list_attestation_metadata, list_authenticators,
+    list_clients, list_keys, list_opcodes, list_providers, ping, psa_aead_decrypt,
     psa_aead_encrypt, psa_asymmetric_decrypt, psa_asymmetric_encrypt, psa_cipher_decrypt,
     psa_cipher_encrypt, psa_destroy_key, psa_export_key, psa_export_public_key, psa_generate_key,
     psa_generate_random, psa_hash_compare, psa_hash_compute, psa_import_key, psa_raw_key_agreement,
@@ -397,16 +397,6 @@ pub trait Provide {
         Err(ResponseStatus::PsaErrorNotSupported)
     }
 
-    /// Prepare a key attestation operation.
-    fn prepare_key_attestation(
-        &self,
-        _application_identity: &ApplicationIdentity,
-        _op: prepare_key_attestation::Operation,
-    ) -> Result<prepare_key_attestation::Result> {
-        trace!("prepare_key_attestation ingress");
-        Err(ResponseStatus::PsaErrorNotSupported)
-    }
-
     /// Attest a key.
     fn attest_key(
         &self,
@@ -418,5 +408,8 @@ pub trait Provide {
     }
 
     /// List the Roots of Trust that the service is configured to interact with.
-    fn list_rots(&self, _op: list_rots::Operation) -> Result<list_rots::Result>;
+    fn list_attestation_metadata(
+        &self,
+        _op: list_attestation_metadata::Operation,
+    ) -> Result<list_attestation_metadata::Result>;
 }

@@ -4,11 +4,12 @@ use super::{utils, Provider};
 use crate::authenticators::ApplicationIdentity;
 use crate::key_info_managers::KeyIdentity;
 use crate::utils::config::{PcrHashAlgType, TpmRotConfig};
+use ciborium::{cbor, ser::into_writer};
 use log::error;
 use parsec_interface::operations::psa_algorithm::Hash;
-use parsec_interface::operations::{attest_key, list_rots, prepare_key_attestation};
-use parsec_interface::requests::{ProviderId, ResponseStatus, Result};
-use parsec_interface::secrecy::zeroize::Zeroizing;
+use parsec_interface::operations::{attest_key, list_attestation_metadata};
+use parsec_interface::requests::{ResponseStatus, Result};
+use serde_bytes::Bytes;
 use std::convert::TryFrom;
 use tss_esapi::constants::TpmFormatOneError;
 use tss_esapi::error::TpmResponseCode;
@@ -17,174 +18,17 @@ use tss_esapi::{abstraction::transient::ObjectWrapper, structures::Auth};
 use tss_esapi::{Error, ReturnCode};
 
 impl Provider {
-    pub(super) fn prepare_key_attestation_internal(
-        &self,
-        application_identity: &ApplicationIdentity,
-        op: prepare_key_attestation::Operation,
-    ) -> Result<prepare_key_attestation::Result> {
-        match op {
-            prepare_key_attestation::Operation::ActivateCredential {
-                attested_key_name,
-                attesting_key_name,
-            } => self.prepare_activate_credential(
-                application_identity,
-                attested_key_name,
-                attesting_key_name,
-            ),
-            _ => {
-                error!("Key attestation mechanism is not supported");
-                Err(ResponseStatus::PsaErrorNotSupported)
-            }
-        }
-    }
-
-    // Get the parameters required for a MakeCredential operation
-    //
-    // If the `attesting_key_name` is not given, a default, RSA decryption
-    // Endorsement Key will be used.
-    fn prepare_activate_credential(
-        &self,
-        application_identity: &ApplicationIdentity,
-        attested_key_name: String,
-        attesting_key_name: Option<String>,
-    ) -> Result<prepare_key_attestation::Result> {
-        if attesting_key_name.is_some() {
-            error!("Attesting with a non-default key is currently not supported");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
-        let key_identity = KeyIdentity::new(
-            application_identity.clone(),
-            self.provider_identity.clone(),
-            attested_key_name,
-        );
-        let pass_context = self.get_key_ctx(&key_identity)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
-        let params = utils::parsec_to_tpm_params(key_attributes)?;
-        let auth = Some(
-            Auth::try_from(pass_context.auth_value().to_vec())
-                .map_err(utils::to_response_status)?,
-        );
-        let attested_key = ObjectWrapper {
-            material: pass_context.key_material().clone(),
-            auth,
-            params,
-        };
-
-        let mut esapi_context = self
-            .esapi_context
-            .lock()
-            .expect("ESAPI Context lock poisoned");
-
-        let params = esapi_context
-            .get_make_cred_params(attested_key, None)
-            .map_err(|e| {
-                format_error!("Failed to get MakeCredential parameters", e);
-                key_attest_response_status(e)
-            })?;
-
-        Ok(prepare_key_attestation::Result::ActivateCredential {
-            name: params.name.into(),
-            attesting_key_pub: utils::ek_pub_key_to_bytes(params.attesting_key_pub)?.into(),
-            public: params.public.into(),
-        })
-    }
-
     pub(super) fn attest_key_internal(
         &self,
         application_identity: &ApplicationIdentity,
         op: attest_key::Operation,
     ) -> Result<attest_key::Result> {
-        match op {
-            attest_key::Operation::ActivateCredential {
-                attested_key_name,
-                attesting_key_name,
-                credential_blob,
-                secret,
-            } => self.activate_credential(
-                application_identity,
-                attested_key_name,
-                attesting_key_name,
-                credential_blob,
-                secret,
-            ),
-            attest_key::Operation::CertifyAndQuote {
-                attested_key_name,
-                nonce,
-                attesting_key_name,
-            } => self.certify_and_quote(
-                application_identity,
-                attested_key_name,
-                attesting_key_name,
-                nonce,
-            ),
-            _ => {
-                error!("Key attestation mechanism is not supported");
-                Err(ResponseStatus::PsaErrorNotSupported)
-            }
-        }
-    }
-
-    fn activate_credential(
-        &self,
-        application_identity: &ApplicationIdentity,
-        attested_key_name: String,
-        attesting_key_name: Option<String>,
-        credential_blob: Zeroizing<Vec<u8>>,
-        secret: Zeroizing<Vec<u8>>,
-    ) -> Result<attest_key::Result> {
-        if attesting_key_name.is_some() {
-            error!("Attesting with a non-default key is currently not supported");
-            return Err(ResponseStatus::PsaErrorNotSupported);
-        }
-
-        let key_identity = KeyIdentity::new(
-            application_identity.clone(),
-            self.provider_identity.clone(),
+        let attest_key::Operation {
             attested_key_name,
-        );
-        let pass_context = self.get_key_ctx(&key_identity)?;
-        let key_attributes = self.key_info_store.get_key_attributes(&key_identity)?;
-        let params = utils::parsec_to_tpm_params(key_attributes)?;
-        let auth = Some(
-            Auth::try_from(pass_context.auth_value().to_vec())
-                .map_err(utils::to_response_status)?,
-        );
-        let attested_key = ObjectWrapper {
-            material: pass_context.key_material().clone(),
-            auth,
-            params,
-        };
+            nonce,
+            attesting_key_name,
+        } = op;
 
-        let mut esapi_context = self
-            .esapi_context
-            .lock()
-            .expect("ESAPI Context lock poisoned");
-
-        let credential = esapi_context
-            .activate_credential(
-                attested_key,
-                None,
-                credential_blob.to_vec(),
-                secret.to_vec(),
-            )
-            .map_err(|e| {
-                format_error!("Failed to activate credential", e);
-                key_attest_response_status(e)
-            })?;
-
-        Ok(attest_key::Result::ActivateCredential {
-            credential: credential.into(),
-        })
-    }
-
-    fn certify_and_quote(
-        &self,
-        application_identity: &ApplicationIdentity,
-        attested_key_name: String,
-        attesting_key_name: Option<String>,
-        nonce: Vec<u8>,
-    ) -> Result<attest_key::Result> {
         if attesting_key_name.is_some() {
             error!("Attesting with a non-default key is currently not supported");
             return Err(ResponseStatus::PsaErrorNotSupported);
@@ -265,7 +109,7 @@ impl Provider {
                     })?
             }
             _ => {
-                error!("TPM RoT invalidly configured (some of the required elements are missing)");
+                error!("TPM attestation invalidly configured (some of the required elements are missing)");
                 return Err(ResponseStatus::PsaErrorGenericError);
             }
         };
@@ -284,27 +128,40 @@ impl Provider {
                 key_attest_response_status(e)
             })?;
 
-        Ok(attest_key::Result::CertifyAndQuote {
-            key_attestation_certificate: key_statement
-                .encode()
-                .map_err(|e| {
-                    format_error!("Failed to encode key attestation token", e);
-                    key_attest_response_status(e)
-                })?
-                .into(),
-            platform_attestation_certificate: platform_statement
-                .encode()
-                .map_err(|e| {
-                    format_error!("Failed to encode platform attestation token", e);
-                    key_attest_response_status(e)
-                })?
-                .into(),
+        let key_token = key_statement.encode().map_err(|e| {
+            format_error!("Failed to encode key attestation token", e);
+            key_attest_response_status(e)
+        })?;
+        let platform_token = platform_statement.encode().map_err(|e| {
+            format_error!("Failed to encode platform attestation token", e);
+            key_attest_response_status(e)
+        })?;
+        let mut attestation_token = vec![];
+        match cbor!({
+            265 => "tag:github.com/parallax-second/key-attestation,2022-11-04",
+            "kat" => &Bytes::new(&key_token[..]),
+            "pat" => &Bytes::new(&platform_token[..]),
+        }) {
+            // Serialize CAB
+            Ok(value) => match into_writer(&value, &mut attestation_token) {
+                Ok(_) => (),
+                Err(_) => return Err(ResponseStatus::PsaErrorGenericError),
+            },
+            Err(_) => return Err(ResponseStatus::PsaErrorGenericError),
+        }
+
+        Ok(attest_key::Result {
+            attestation_token: attestation_token.into(),
         })
     }
 
-    pub(super) fn list_rots_internal(&self) -> Result<list_rots::Result> {
+    pub(super) fn list_attestation_metadata_internal(
+        &self,
+    ) -> Result<list_attestation_metadata::Result> {
         match self.root_of_trust.clone() {
-            None => Ok(list_rots::Result { rots: Vec::new() }),
+            None => Ok(list_attestation_metadata::Result {
+                attestation_metadata: Vec::new(),
+            }),
             Some(TpmRotConfig {
                 pcr_list: Some(pcr_list),
                 pcr_hash_alg: Some(pcr_hash_alg),
@@ -323,10 +180,9 @@ impl Provider {
                     PcrHashAlgType::Sha256 => Hash::Sha256,
                 };
 
-                Ok(list_rots::Result {
-                    rots: vec![list_rots::RoTInfo {
-                        provider_id: ProviderId::Tpm,
-                        mechanism: list_rots::Mechanism::CertifyAndQuote {
+                Ok(list_attestation_metadata::Result {
+                    attestation_metadata: vec![
+                        list_attestation_metadata::AttestationMetadata::Tpm {
                             ak_attributes: attesting_key_attributes,
                             ak_public: utils::pub_key_to_bytes(
                                 attesting_key_pass_context.key_material().public().clone(),
@@ -336,7 +192,7 @@ impl Provider {
                             pcr_list,
                             pcr_hash,
                         },
-                    }],
+                    ],
                 })
             }
             _ => {

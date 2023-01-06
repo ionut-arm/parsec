@@ -18,7 +18,7 @@ use parsec_interface::operations::psa_algorithm::Hash::Sha256;
 use parsec_interface::operations::psa_algorithm::SignHash::Specific;
 use parsec_interface::operations::psa_key_attributes::{EccFamily, Policy, UsageFlags};
 use parsec_interface::operations::{
-    attest_key, can_do_crypto, list_rots, prepare_key_attestation, psa_asymmetric_decrypt,
+    attest_key, can_do_crypto, list_attestation_metadata, psa_asymmetric_decrypt,
     psa_asymmetric_encrypt, psa_destroy_key, psa_export_public_key, psa_generate_key,
     psa_generate_random, psa_import_key, psa_key_attributes, psa_sign_hash, psa_verify_hash,
 };
@@ -43,7 +43,7 @@ mod key_attestation;
 mod key_management;
 mod utils;
 
-const SUPPORTED_OPCODES: [Opcode; 12] = [
+const SUPPORTED_OPCODES: [Opcode; 11] = [
     Opcode::PsaGenerateKey,
     Opcode::PsaGenerateRandom,
     Opcode::PsaDestroyKey,
@@ -55,7 +55,6 @@ const SUPPORTED_OPCODES: [Opcode; 12] = [
     Opcode::PsaAsymmetricEncrypt,
     Opcode::CanDoCrypto,
     Opcode::AttestKey,
-    Opcode::PrepareKeyAttestation,
 ];
 
 const ROOT_KEY_SIZE: u16 = 2048;
@@ -309,15 +308,6 @@ impl Provide for Provider {
         self.can_do_crypto_main(application_identity, op)
     }
 
-    fn prepare_key_attestation(
-        &self,
-        application_identity: &ApplicationIdentity,
-        op: prepare_key_attestation::Operation,
-    ) -> Result<prepare_key_attestation::Result> {
-        trace!("prepare_key_attestation ingress");
-        self.prepare_key_attestation_internal(application_identity, op)
-    }
-
     fn attest_key(
         &self,
         application_identity: &ApplicationIdentity,
@@ -327,9 +317,9 @@ impl Provide for Provider {
         self.attest_key_internal(application_identity, op)
     }
 
-    fn list_rots(&self, _op: list_rots::Operation) -> Result<list_rots::Result> {
-        trace!("list_rots ingress");
-        self.list_rots_internal()
+    fn list_attestation_metadata(&self, _op: list_attestation_metadata::Operation) -> Result<list_attestation_metadata::Result> {
+        trace!("list_attestation_metadata ingress");
+        self.list_attestation_metadata_internal()
     }
 }
 
