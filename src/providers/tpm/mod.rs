@@ -317,7 +317,10 @@ impl Provide for Provider {
         self.attest_key_internal(application_identity, op)
     }
 
-    fn list_attestation_metadata(&self, _op: list_attestation_metadata::Operation) -> Result<list_attestation_metadata::Result> {
+    fn list_attestation_metadata(
+        &self,
+        _op: list_attestation_metadata::Operation,
+    ) -> Result<list_attestation_metadata::Result> {
         trace!("list_attestation_metadata ingress");
         self.list_attestation_metadata_internal()
     }
