@@ -9,7 +9,6 @@ use log::error;
 use parsec_interface::operations::psa_algorithm::Hash;
 use parsec_interface::operations::{attest_key, list_attestation_metadata};
 use parsec_interface::requests::{ResponseStatus, Result};
-use serde_bytes::Bytes;
 use std::convert::TryFrom;
 use tss_esapi::constants::TpmFormatOneError;
 use tss_esapi::error::TpmResponseCode;
@@ -115,14 +114,14 @@ impl Provider {
         };
 
         let key_statement = esapi_context
-            .certify(attested_key.clone(), attesting_key, nonce.clone())
+            .certify(attested_key, attesting_key.clone(), nonce.clone())
             .map_err(|e| {
                 format_error!("Failed to certify", e);
                 key_attest_response_status(e)
             })?;
 
         let platform_statement = esapi_context
-            .quote(attested_key, nonce, pcr_selection_list)
+            .quote(attesting_key, nonce, pcr_selection_list)
             .map_err(|e| {
                 format_error!("Failed to quote", e);
                 key_attest_response_status(e)
@@ -137,11 +136,12 @@ impl Provider {
             key_attest_response_status(e)
         })?;
         let mut attestation_token = vec![];
-        match cbor!({
-            265 => "tag:github.com/parallax-second/key-attestation,2022-11-04",
-            "kat" => &Bytes::new(&key_token[..]),
-            "pat" => &Bytes::new(&platform_token[..]),
-        }) {
+        match cbor!([
+        "application/vnd.parallaxsecond.key-attestation.tpm",
+        {
+        "kat" => key_token,
+        "pat" => platform_token,
+        }]) {
             // Serialize CAB
             Ok(value) => match into_writer(&value, &mut attestation_token) {
                 Ok(_) => (),
