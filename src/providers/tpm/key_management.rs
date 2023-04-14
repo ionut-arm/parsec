@@ -105,7 +105,7 @@ impl Provider {
         let auth_value = auth_value.unwrap();
 
         self.key_info_store.insert_key_info(
-            key_identity,
+            key_identity.clone(),
             &PasswordContext::new(key_material, auth_value.as_bytes().to_vec()),
             attributes,
         )?;

@@ -4,17 +4,16 @@
 //!
 //! For security reasons, only the PARSEC service should have the ability to modify these files.
 use super::{KeyIdentity, KeyInfo, ManageKeyInfo};
-use crate::authenticators::ApplicationIdentity;
+use crate::authenticators::{ApplicationIdentity, Auth};
 use crate::providers::ProviderIdentity;
 use crate::utils::config::KeyInfoManagerType;
 use anyhow::{Context, Result};
 use log::{error, info};
-use num_traits::FromPrimitive;
 use parsec_interface::operations::psa_key_attributes::Attributes;
-use parsec_interface::requests::AuthType;
 use rusqlite::types::Type::{Blob, Integer};
 use rusqlite::{params, Connection, Error as RusqliteError};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::fs;
 use std::fs::Permissions;
 use std::io::{Error, ErrorKind};
@@ -47,17 +46,6 @@ pub struct SQLiteKeyInfoManager {
     /// The file path where the SQLite database exists. This database holds
     /// key identity to key info mappings.
     database_path: PathBuf,
-}
-
-/// Converts a 64 bit integer to an AuthType
-fn i64_to_auth_type(auth_type: i64) -> Result<AuthType, String> {
-    match FromPrimitive::from_i64(auth_type) {
-        Some(auth_type) => Ok(auth_type),
-        None => Err(format!(
-            "Failed to get AuthType from authenticator_id.\nAuthenticator \"{}\" does not exist.",
-            auth_type
-        )),
-    }
 }
 
 /// SQLite-based `KeyInfoManager`
@@ -240,9 +228,9 @@ impl SQLiteKeyInfoManager {
         let mut rows = key_mapping_stmt.query(params![])?;
         while let Some(row) = rows.next()? {
             let key_identity = KeyIdentity::new(
-                ApplicationIdentity::new(
+                ApplicationIdentity::new_with_auth(
                     row.get("application_name")?,
-                    i64_to_auth_type(row.get("authenticator_id")?).map_err(|e| {
+                    Auth::try_from(row.get::<&str, i64>("authenticator_id")?).map_err(|e| {
                         format_error!("Failed to get AuthType from authenticator_id.", e);
                         let error = Box::new(Error::new(ErrorKind::InvalidData, e));
                         RusqliteError::FromSqlConversionFailure(64, Integer, error)

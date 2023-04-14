@@ -27,9 +27,11 @@ pub mod jwt_svid_authenticator;
 
 use crate::front::listener::ConnectionMetadata;
 use crate::utils::config::Admin;
+use num_traits::FromPrimitive;
 use parsec_interface::operations::list_authenticators;
 use parsec_interface::requests::request::RequestAuth;
-use parsec_interface::requests::{AuthType, Result};
+use parsec_interface::requests::{AuthType, ResponseStatus, Result};
+use std::convert::TryFrom;
 use std::fmt;
 use std::ops::Deref;
 
@@ -112,6 +114,26 @@ impl Auth {
 impl From<AuthType> for Auth {
     fn from(auth: AuthType) -> Self {
         Auth::Client(auth)
+    }
+}
+
+impl TryFrom<i64> for Auth {
+    type Error = ResponseStatus;
+
+    fn try_from(num: i64) -> Result<Self> {
+        if num == 255 {
+            return Ok(Auth::Internal);
+        }
+        match AuthType::from_i64(num) {
+            Some(auth_type) => Ok(Auth::Client(auth_type)),
+            None => {
+                log::error!(
+                    "Failed to get AuthType from authenticator_id.\nAuthenticator \"{}\" does not exist.",
+                    num
+                );
+                Err(ResponseStatus::InvalidEncoding)
+            }
+        }
     }
 }
 

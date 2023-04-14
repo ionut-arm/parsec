@@ -6,7 +6,7 @@
 //! for their Parsec operations.
 use super::Provide;
 use crate::authenticators::ApplicationIdentity;
-use crate::key_info_managers::{KeyIdentity, KeyInfoManagerClient};
+use crate::key_info_managers::KeyInfoManagerClient;
 use crate::providers::crypto_capability::CanDoCrypto;
 use crate::providers::ProviderIdentity;
 use crate::utils::config::{AttestingKeyConfig, TpmRotConfig};
@@ -134,14 +134,15 @@ impl Provider {
                         },
                     },
                 };
-                if provider
+                if let Err(e) = provider
                     .psa_generate_key_internal(&provider_identity, op)
-                    .is_err()
                 {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Failed to generate attesting key",
-                    ));
+                    if e != ResponseStatus::PsaErrorAlreadyExists {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Failed to generate attesting key",
+                        ));
+                    }
                 };
             }
             Some(AttestingKeyConfig::Rsa) => {
@@ -328,12 +329,6 @@ impl Provide for Provider {
 
 impl Drop for Provider {
     fn drop(&mut self) {
-        let key_identity = KeyIdentity::new(
-            ApplicationIdentity::new_internal(String::from("tpm-provider")),
-            self.provider_identity.clone(),
-            String::from("aik"),
-        );
-        let _ = self.key_info_store.remove_key_info(&key_identity);
         info!("Dropping the TPM Provider.");
     }
 }

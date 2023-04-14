@@ -43,13 +43,16 @@ pub struct KeyIdentity {
 impl Hash for KeyIdentity {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.application.hash(state);
+        self.provider.hash(state);
         self.key_name.hash(state);
     }
 }
 
 impl PartialEq for KeyIdentity {
     fn eq(&self, other: &Self) -> bool {
-        self.key_name() == other.key_name() && self.application() == other.application()
+        self.key_name() == other.key_name()
+            && self.provider() == other.provider()
+            && self.application() == other.application()
     }
 }
 
