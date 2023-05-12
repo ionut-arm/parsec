@@ -9,6 +9,7 @@ use log::error;
 use parsec_interface::operations::psa_algorithm::Hash;
 use parsec_interface::operations::{attest_key, list_attestation_metadata};
 use parsec_interface::requests::{ResponseStatus, Result};
+use serde_bytes::Bytes;
 use std::convert::TryFrom;
 use tss_esapi::constants::TpmFormatOneError;
 use tss_esapi::error::TpmResponseCode;
@@ -135,13 +136,13 @@ impl Provider {
             format_error!("Failed to encode platform attestation token", e);
             key_attest_response_status(e)
         })?;
+
         let mut attestation_token = vec![];
-        match cbor!([
-        "application/vnd.parallaxsecond.key-attestation.tpm",
+        match cbor!(
         {
         "kat" => key_token,
         "pat" => platform_token,
-        }]) {
+        }) {
             // Serialize CAB
             Ok(value) => match into_writer(&value, &mut attestation_token) {
                 Ok(_) => (),
@@ -150,8 +151,21 @@ impl Provider {
             Err(_) => return Err(ResponseStatus::PsaErrorGenericError),
         }
 
+        let mut cmw = vec![];
+        match cbor!([
+            "application/vnd.parallaxsecond.key-attestation.tpm",
+            Bytes::new(&attestation_token)
+        ]) {
+            // Serialize CAB
+            Ok(value) => match into_writer(&value, &mut cmw) {
+                Ok(_) => (),
+                Err(_) => return Err(ResponseStatus::PsaErrorGenericError),
+            },
+            Err(_) => return Err(ResponseStatus::PsaErrorGenericError),
+        }
+
         Ok(attest_key::Result {
-            attestation_token: attestation_token.into(),
+            attestation_token: cmw.into(),
         })
     }
 
